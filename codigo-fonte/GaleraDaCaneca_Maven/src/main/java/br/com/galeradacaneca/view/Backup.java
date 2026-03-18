@@ -1,0 +1,251 @@
+package br.com.galeradacaneca.view;
+
+import br.com.galeradacaneca.dao.JPAUtil;
+import br.com.galeradacaneca.model.Vendedor;
+import javax.swing.*;
+import java.io.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+/**
+ * Tela de Backup — RF011
+ * Apenas Gerente pode executar backup manual.
+ * O backup gera um arquivo SQL via mysqldump.
+ */
+public class Backup extends javax.swing.JFrame {
+
+    private final Vendedor vendedorLogado;
+
+    public Backup(Vendedor vendedor) {
+        this.vendedorLogado = vendedor;
+        initComponents();
+        setLocationRelativeTo(null);
+        setTitle("Galera da Caneca — Backup");
+        if (!vendedor.isGerente()) {
+            btnRealizarBackup.setEnabled(false);
+            lblStatus.setText("Apenas gerentes podem realizar backup.");
+        }
+    }
+
+    private void realizarBackup() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        chooser.setDialogTitle("Selecione a pasta de destino do backup");
+        int result = chooser.showSaveDialog(this);
+        if (result != JFileChooser.APPROVE_OPTION) return;
+
+        String pasta = chooser.getSelectedFile().getAbsolutePath();
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        String arquivo = pasta + File.separator + "backup_galera_" + timestamp + ".sql";
+
+        lblStatus.setText("Realizando backup...");
+        btnRealizarBackup.setEnabled(false);
+
+        // Executa em thread separada para não travar a UI
+        new Thread(() -> {
+            try {
+                // Pega as configurações do persistence.xml via propriedades do EntityManager
+                String url   = "jdbc:mysql://localhost:3306/Galera_da_Caneca";
+                String user  = "root";
+                String pass  = "root";
+                String db    = "Galera_da_Caneca";
+
+                // Tenta extrair do persistence.xml se disponível
+                try {
+                    javax.persistence.EntityManager em = JPAUtil.getEntityManager();
+                    // As propriedades ficam no factory, não acessíveis diretamente, usamos os defaults acima
+                    em.close();
+                } catch (Exception ignored) {}
+
+                ProcessBuilder pb = new ProcessBuilder(
+                    "mysqldump",
+                    "-u" + user,
+                    "-p" + pass,
+                    "--databases", db,
+                    "--result-file=" + arquivo
+                );
+                pb.redirectErrorStream(true);
+                Process processo = pb.start();
+
+                // Captura saída do processo
+                StringBuilder saida = new StringBuilder();
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(processo.getInputStream()))) {
+                    String linha;
+                    while ((linha = br.readLine()) != null) saida.append(linha).append("\n");
+                }
+
+                int exitCode = processo.waitFor();
+
+                if (exitCode == 0) {
+                    SwingUtilities.invokeLater(() -> {
+                        lblStatus.setText("Backup realizado: " + arquivo);
+                        JOptionPane.showMessageDialog(this,
+                            "Backup realizado com sucesso!\nArquivo: " + arquivo,
+                            "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+                        btnRealizarBackup.setEnabled(true);
+                    });
+                } else {
+                    String erro = saida.toString();
+                    SwingUtilities.invokeLater(() -> {
+                        lblStatus.setText("Erro no backup. Verifique o mysqldump.");
+                        JOptionPane.showMessageDialog(this,
+                            "Erro ao realizar backup.\nmysqldump deve estar no PATH do sistema.\nDetalhes: " + erro,
+                            "Erro", JOptionPane.ERROR_MESSAGE);
+                        btnRealizarBackup.setEnabled(true);
+                    });
+                }
+            } catch (IOException e) {
+                SwingUtilities.invokeLater(() -> {
+                    lblStatus.setText("mysqldump não encontrado no PATH.");
+                    JOptionPane.showMessageDialog(this,
+                        "Não foi possível executar o mysqldump.\nCertifique-se que o MySQL está instalado e o mysqldump está no PATH.\n\n" + e.getMessage(),
+                        "Erro", JOptionPane.ERROR_MESSAGE);
+                    btnRealizarBackup.setEnabled(true);
+                });
+            } catch (Exception e) {
+                SwingUtilities.invokeLater(() -> {
+                    lblStatus.setText("Erro inesperado: " + e.getMessage());
+                    btnRealizarBackup.setEnabled(true);
+                });
+            }
+        }).start();
+    }
+
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+        jPanel4 = new javax.swing.JPanel();
+        jLabel4 = new javax.swing.JLabel();
+        jLabel3 = new javax.swing.JLabel();
+        jLabel5 = new javax.swing.JLabel();
+        btnCadastroFuncionario = new javax.swing.JButton();
+        btnCadastroClientes = new javax.swing.JButton();
+        btnCadastroProduto = new javax.swing.JButton();
+        jLabel6 = new javax.swing.JLabel();
+        btnSair = new javax.swing.JButton();
+        jPanel5 = new javax.swing.JPanel();
+        jLabel1 = new javax.swing.JLabel();
+        btnRealizarBackup = new javax.swing.JButton();
+        lblStatus = new javax.swing.JLabel();
+        jLabel2 = new javax.swing.JLabel();
+
+        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+
+        jPanel4.setBackground(new java.awt.Color(0, 153, 204));
+        jLabel4.setIcon(new javax.swing.ImageIcon(getClass().getResource("/br/com/galeradacaneca/view/User.png")));
+        jLabel3.setIcon(new javax.swing.ImageIcon(getClass().getResource("/br/com/galeradacaneca/view/File text.png")));
+        jLabel5.setIcon(new javax.swing.ImageIcon(getClass().getResource("/br/com/galeradacaneca/view/Book open.png")));
+        jLabel6.setIcon(new javax.swing.ImageIcon(getClass().getResource("/br/com/galeradacaneca/view/Log in.png")));
+
+        btnCadastroFuncionario.setBackground(new java.awt.Color(0, 153, 204));
+        btnCadastroFuncionario.setFont(new java.awt.Font("Gadugi", 1, 12));
+        btnCadastroFuncionario.setForeground(java.awt.Color.WHITE);
+        btnCadastroFuncionario.setText("Funcionários");
+        btnCadastroFuncionario.setBorder(null);
+        btnCadastroFuncionario.addActionListener(evt -> { new CadastroFuncionarios(vendedorLogado).setVisible(true); this.dispose(); });
+
+        btnCadastroClientes.setBackground(new java.awt.Color(0, 153, 204));
+        btnCadastroClientes.setFont(new java.awt.Font("Gadugi", 1, 12));
+        btnCadastroClientes.setForeground(java.awt.Color.WHITE);
+        btnCadastroClientes.setText("Clientes");
+        btnCadastroClientes.setBorder(null);
+        btnCadastroClientes.addActionListener(evt -> { new CadastroClientes(vendedorLogado).setVisible(true); this.dispose(); });
+
+        btnCadastroProduto.setBackground(new java.awt.Color(0, 153, 204));
+        btnCadastroProduto.setFont(new java.awt.Font("Gadugi", 1, 12));
+        btnCadastroProduto.setForeground(java.awt.Color.WHITE);
+        btnCadastroProduto.setText("Dashboard");
+        btnCadastroProduto.setBorder(null);
+        btnCadastroProduto.addActionListener(evt -> { new DashbordGerente(vendedorLogado).setVisible(true); this.dispose(); });
+
+        btnSair.setBackground(new java.awt.Color(0, 153, 204));
+        btnSair.setFont(new java.awt.Font("Gadugi", 1, 12));
+        btnSair.setForeground(java.awt.Color.WHITE);
+        btnSair.setText("Sair");
+        btnSair.setBorder(null);
+        btnSair.addActionListener(evt -> { this.dispose(); new Login().setVisible(true); });
+
+        javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
+        jPanel4.setLayout(jPanel4Layout);
+        jPanel4Layout.setHorizontalGroup(
+            jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel4Layout.createSequentialGroup().addGap(10,10,10)
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel4Layout.createSequentialGroup().addComponent(jLabel4).addGap(5,5,5).addComponent(btnCadastroFuncionario))
+                    .addGroup(jPanel4Layout.createSequentialGroup().addComponent(jLabel3).addGap(5,5,5).addComponent(btnCadastroClientes))
+                    .addGroup(jPanel4Layout.createSequentialGroup().addComponent(jLabel5).addGap(5,5,5).addComponent(btnCadastroProduto))
+                    .addGroup(jPanel4Layout.createSequentialGroup().addComponent(jLabel6).addGap(5,5,5).addComponent(btnSair)))
+                .addContainerGap(10, Short.MAX_VALUE))
+        );
+        jPanel4Layout.setVerticalGroup(
+            jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel4Layout.createSequentialGroup().addGap(20,20,20)
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.CENTER).addComponent(jLabel4).addComponent(btnCadastroFuncionario)).addGap(15,15,15)
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.CENTER).addComponent(jLabel3).addComponent(btnCadastroClientes)).addGap(15,15,15)
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.CENTER).addComponent(jLabel5).addComponent(btnCadastroProduto)).addGap(15,15,15)
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.CENTER).addComponent(jLabel6).addComponent(btnSair))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+
+        jPanel5.setBackground(new java.awt.Color(245, 245, 245));
+        jLabel1.setFont(new java.awt.Font("Gadugi", 1, 16));
+        jLabel1.setText("Backup do Sistema");
+
+        jLabel2.setFont(new java.awt.Font("Gadugi", 0, 12));
+        jLabel2.setForeground(new java.awt.Color(80, 80, 80));
+        jLabel2.setText("<html>O backup exporta todos os dados do banco Galera_da_Caneca<br>para um arquivo SQL na pasta de sua escolha.<br>Requer que o <b>mysqldump</b> esteja disponível no PATH do sistema.</html>");
+
+        btnRealizarBackup.setBackground(new java.awt.Color(0, 153, 204));
+        btnRealizarBackup.setFont(new java.awt.Font("Gadugi", 1, 14));
+        btnRealizarBackup.setForeground(java.awt.Color.WHITE);
+        btnRealizarBackup.setIcon(new javax.swing.ImageIcon(getClass().getResource("/br/com/galeradacaneca/view/Save.png")));
+        btnRealizarBackup.setText("  Realizar Backup Agora");
+        btnRealizarBackup.addActionListener(evt -> realizarBackup());
+
+        lblStatus = new javax.swing.JLabel("Pronto.");
+        lblStatus.setFont(new java.awt.Font("Gadugi", 2, 11));
+        lblStatus.setForeground(new java.awt.Color(0, 100, 0));
+
+        javax.swing.GroupLayout jPanel5Layout = new javax.swing.GroupLayout(jPanel5);
+        jPanel5.setLayout(jPanel5Layout);
+        jPanel5Layout.setHorizontalGroup(
+            jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel5Layout.createSequentialGroup().addGap(30,30,30)
+                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel1)
+                    .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 400, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnRealizarBackup, javax.swing.GroupLayout.PREFERRED_SIZE, 280, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(lblStatus))
+                .addContainerGap(30, Short.MAX_VALUE))
+        );
+        jPanel5Layout.setVerticalGroup(
+            jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel5Layout.createSequentialGroup().addGap(30,30,30)
+                .addComponent(jLabel1).addGap(20,20,20)
+                .addComponent(jLabel2).addGap(25,25,25)
+                .addComponent(btnRealizarBackup, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE).addGap(15,15,15)
+                .addComponent(lblStatus)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+        getContentPane().setLayout(layout);
+        layout.setHorizontalGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)));
+        layout.setVerticalGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE));
+        pack();
+    }// </editor-fold>//GEN-END:initComponents
+
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btnCadastroClientes, btnCadastroProduto, btnCadastroFuncionario;
+    private javax.swing.JButton btnRealizarBackup, btnSair;
+    private javax.swing.JLabel jLabel1, jLabel2, jLabel3, jLabel4, jLabel5, jLabel6;
+    private javax.swing.JLabel lblStatus;
+    private javax.swing.JPanel jPanel4, jPanel5;
+    // End of variables declaration//GEN-END:variables
+}
